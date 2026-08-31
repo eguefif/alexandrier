@@ -1,16 +1,7 @@
 use crate::models::doc_source::DocSource;
-use std::io;
+use crate::screens::{Screen, Screens, doc_source_form::DocSourceForm};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{
-    DefaultTerminal, Frame,
-    buffer::Buffer,
-    layout::Rect,
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
-};
+use ratatui::DefaultTerminal;
 
 use rusqlite::Connection;
 
@@ -18,11 +9,16 @@ use rusqlite::Connection;
 pub struct App {
     exit: bool,
     conn: Connection,
+    screen: Box<dyn Screen>,
 }
 
 impl App {
     pub fn new(conn: Connection) -> Result<Self, Box<dyn std::error::Error>> {
-        let app = App { exit: false, conn };
+        let app = App {
+            exit: false,
+            conn,
+            screen: Box::new(DocSourceForm::default()),
+        };
         app.init()?;
         Ok(app)
     }
@@ -38,48 +34,21 @@ impl App {
         terminal: &mut DefaultTerminal,
     ) -> Result<(), Box<dyn std::error::Error>> {
         while !self.exit {
-            terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events()?;
-        }
-        Ok(())
-    }
-
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
-    }
-
-    fn handle_events(&mut self) -> io::Result<()> {
-        match event::read()? {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event);
+            terminal.draw(|frame| self.screen.draw(frame))?;
+            let next_screen_state = self.screen.handle_events()?;
+            if next_screen_state == Screens::Exit {
+                self.exit = true;
+            } else if next_screen_state != self.screen.current() {
+                self.screen = self.get_screen(next_screen_state);
             }
-            _ => {}
-        };
+        }
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            _ => {}
+    fn get_screen(&self, screen: Screens) -> Box<dyn Screen> {
+        match screen {
+            Screens::DocSourceFormScreen => Box::new(DocSourceForm::default()),
+            Screens::Exit => Box::new(DocSourceForm::default()),
         }
-    }
-
-    fn exit(&mut self) {
-        self.exit = true;
-    }
-}
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Alexandria Library ".bold());
-        let block = Block::bordered()
-            .title(title.centered())
-            .border_set(border::THICK);
-        let text = Text::from(vec![Line::from(vec!["value".into()])]);
-        Paragraph::new(text)
-            .centered()
-            .block(block)
-            .render(area, buf);
     }
 }

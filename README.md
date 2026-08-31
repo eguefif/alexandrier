@@ -22,7 +22,16 @@ cargo run
 
 ## TODO
 
+Currently working on:
+
+- [ ] Add widget form to DocSourceForm
+- [ ] Add insert function in DocSource model
+
 ### Ingestion
+
+We will work first on two documentation:
+- [ ] FastAPI
+- [ ] SqlAlchemy
 
 ### Source edit
 
