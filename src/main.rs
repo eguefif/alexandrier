@@ -1,10 +1,13 @@
-use ratatui;
-use std::io;
+pub mod app;
+pub mod models;
 
-mod app;
+use ratatui;
+use rusqlite::Connection;
 
 use app::App;
 
-fn main() -> io::Result<()> {
-    ratatui::run(|terminal| App::default().run(terminal))
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let conn = Connection::open("./alexandria_db.db")?;
+    let mut app = App::new(conn)?;
+    ratatui::run(|terminal| app.run(terminal))
 }

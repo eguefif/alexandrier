@@ -1,3 +1,4 @@
+use crate::models::doc_source::DocSource;
 use std::io;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -11,13 +12,31 @@ use ratatui::{
     widgets::{Block, Paragraph, Widget},
 };
 
-#[derive(Debug, Default)]
+use rusqlite::Connection;
+
+#[derive(Debug)]
 pub struct App {
     exit: bool,
+    conn: Connection,
 }
 
 impl App {
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub fn new(conn: Connection) -> Result<Self, Box<dyn std::error::Error>> {
+        let app = App { exit: false, conn };
+        app.init()?;
+        Ok(app)
+    }
+
+    fn init(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let create_source_table_query = DocSource::create_table_query();
+        self.conn.execute(&create_source_table_query, ())?;
+        Ok(())
+    }
+
+    pub fn run(
+        &mut self,
+        terminal: &mut DefaultTerminal,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
